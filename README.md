@@ -7,6 +7,8 @@ companion piece to [n8n-request-tracker](https://github.com/facundosarina/n8n-re
 showing the same "turn manual, repetitive work into something automatic"
 approach applied with plain Python instead of a no-code workflow tool.
 
+**Live demo:** https://facundosarina-expense-tracker.streamlit.app/
+
 Sample data is fictional — no real financial information is included.
 
 ## Problem it solves
