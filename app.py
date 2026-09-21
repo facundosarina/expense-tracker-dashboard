@@ -31,11 +31,14 @@ st.set_page_config(page_title="Expense Tracker", page_icon="💸", layout="wide"
 def load_data(path: str) -> pd.DataFrame:
     if not os.path.exists(path):
         return pd.DataFrame(columns=["date", "description", "amount", "category"])
-    df = pd.read_csv(path, parse_dates=["date"])
+    df = pd.read_csv(path)
+    df["date"] = pd.to_datetime(df["date"], format="mixed")
     return df
 
 
 def save_data(df: pd.DataFrame) -> None:
+    df = df.copy()
+    df["date"] = pd.to_datetime(df["date"], format="mixed").dt.strftime("%Y-%m-%d")
     df.to_csv(DATA_PATH, index=False)
     st.cache_data.clear()
 
