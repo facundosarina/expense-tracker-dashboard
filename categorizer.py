@@ -19,11 +19,12 @@ from __future__ import annotations
 import re
 
 # Category -> list of keywords that, if found in the description, suggest
-# that category. Order matters: the first category with a match wins, so
-# more specific categories are listed before more generic ones.
+# that category. Keywords are matched as whole words, and the longest match
+# across all categories wins, so a keyword only needs to be specific enough
+# to be unambiguous -- it does not need to be listed before another one.
 CATEGORY_RULES: dict[str, list[str]] = {
     "Groceries": [
-        "supermarket", "grocery", "market", "carrefour", "coto", "dia%",
+        "supermarket", "grocery", "market", "carrefour", "coto", "dia",
         "jumbo", "walmart", "whole foods", "aldi", "lidl", "esselunga",
         "conad", "verduleria", "carniceria", "almacen",
     ],
@@ -41,7 +42,8 @@ CATEGORY_RULES: dict[str, list[str]] = {
     "Utilities": [
         "electric", "electricidad", "edenor", "edesur", "gas natural",
         "water bill", "agua", "internet", "wifi", "fibra", "telecom",
-        "movistar", "claro", "personal", "tim", "vodafone", "phone bill",
+        "movistar", "claro", "personal flow", "personal pago", "tim",
+        "vodafone", "phone bill",
     ],
     "Health": [
         "pharmacy", "farmacia", "farmacia italiana", "doctor", "medico",
@@ -83,25 +85,43 @@ def _normalize(text: str) -> str:
     return text
 
 
+def _pattern_for(keyword: str) -> str:
+    """Build a whole-word pattern for one keyword.
+
+    Word boundaries matter more than they look. Without them "dia" (the
+    supermarket chain) matches "guardia", "personal" (the phone carrier)
+    matches "personal trainer", and "bar" matches "barberia". A trailing `%`
+    means "this word may continue", for brands written with a suffix.
+    """
+    escaped = re.escape(_normalize(keyword))
+    if escaped.endswith(r"\%"):
+        return r"\b" + escaped[:-2] + r"\w*"
+    return r"\b" + escaped + r"\b"
+
+
 def categorize(description: str) -> str:
     """
     Guess a spending category from a free-text description.
 
-    Returns the first category whose keyword list matches, or
-    DEFAULT_CATEGORY ("Other") if nothing matches.
+    Every rule is tested, and the longest matching keyword wins: "uber eats"
+    beats "uber", so a food delivery is Dining and not Transport regardless of
+    the order the categories happen to be written in. Ties fall back to the
+    order of CATEGORY_RULES. Returns DEFAULT_CATEGORY when nothing matches.
     """
     if not description:
         return DEFAULT_CATEGORY
 
     normalized = _normalize(description)
 
+    best_category = DEFAULT_CATEGORY
+    best_length = 0
     for category, keywords in CATEGORY_RULES.items():
         for keyword in keywords:
-            pattern = re.escape(_normalize(keyword)).replace(r"\%", ".*")
-            if re.search(pattern, normalized):
-                return category
+            if re.search(_pattern_for(keyword), normalized):
+                if len(keyword) > best_length:
+                    best_category, best_length = category, len(keyword)
 
-    return DEFAULT_CATEGORY
+    return best_category
 
 
 def categorize_many(descriptions: list[str]) -> list[str]:

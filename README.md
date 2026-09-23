@@ -9,7 +9,10 @@ approach applied with plain Python instead of a no-code workflow tool.
 
 **Live demo:** https://facundosarina-expense-tracker.streamlit.app/
 
-Sample data is fictional — no real financial information is included.
+Sample data is fictional — no real financial information is included. The demo
+is safe to poke at: the sample file is read once and then lives in your own
+browser session, so anything you add or import is yours alone and is never
+written back to the server.
 
 ## Problem it solves
 
@@ -30,14 +33,17 @@ its description, and the dashboard updates immediately.
    category. No ML model or external API — just a readable, easy-to-extend
    set of rules. Keywords cover both English and Spanish merchant names,
    since real bank statements are rarely in a single language.
-2. **Manual entry** — add one transaction at a time through a form; the
-   category is suggested as you type and can always be overridden.
+2. **Manual entry** — add one transaction at a time; the suggested category
+   appears as soon as you type the description, and can always be overridden
+   before saving.
 3. **Bulk import** — upload a CSV with `date, description, amount` and every
    row gets auto-categorized before it's added, with a preview so you can
    check the results first.
 4. **Dashboard (`app.py`)** — filter by date range and category, and see:
    total spent, transaction count, average transaction, top category, a
-   by-category breakdown, and a month-by-month trend.
+   by-category breakdown and a month-by-month trend. Category totals are drawn
+   as horizontal bars rather than a pie, because nine slices of a donut cannot
+   be compared by eye.
 
 ![Dashboard screenshot](dashboard_screenshot.png)
 
@@ -47,6 +53,7 @@ its description, and the dashboard updates immediately.
 pip install -r requirements.txt
 python generate_sample_data.py   # optional: creates fictional sample data
 streamlit run app.py
+python -m pytest -q              # the categorization rules, 5 tests
 ```
 
 Then open the local URL Streamlit prints (usually `http://localhost:8501`).
@@ -61,12 +68,18 @@ sections in the app. To add or tweak categories, edit `CATEGORY_RULES` in
 - **Categorization is keyword-based, not ML-based.** It's transparent and
   easy to extend, but a merchant name it has never seen (and that doesn't
   contain any known keyword) falls back to "Other" until a matching keyword
-  is added.
-- **Storage is a single CSV file**, not a database — fine for personal use
-  at this scale, but a multi-user or high-volume version should move to a
-  proper database.
-- **No multi-currency support** — amounts are treated as a single currency
-  throughout.
+  is added. Keywords match whole words and the longest match wins, so
+  "UBER EATS" is Dining rather than Transport, and "BARBERIA" is not read as
+  a bar — the cases that a plain substring search gets wrong are covered in
+  `test_categorizer.py`.
+- **Nothing is persisted.** The bundled CSV seeds each visitor's session and
+  is never written to. That is deliberate for a public demo — one visitor's
+  test data must not become the next visitor's starting point — but it does
+  mean your own entries disappear when you close the tab. Use "Download this
+  data" to keep them. A real personal-use version would need a database and a
+  login before storing anyone's actual finances.
+- **Single currency.** Amounts are treated as ARS throughout; there is no
+  conversion.
 
 ## Stack
 
